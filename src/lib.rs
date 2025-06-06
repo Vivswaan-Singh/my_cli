@@ -2,6 +2,7 @@ use std::fs;
 use std::path::Path;
 use std::error::Error;
 use colored::*;
+pub mod cmds;
 
 #[derive(Debug)]
 pub struct Input{
@@ -23,75 +24,15 @@ impl Input{
     }
 }
 
-pub fn show(ips: &Vec<String>) -> Result<(), Box<dyn Error>> {
-	for i in ips{
-        print!("{} ",i.red().on_white());
-    }
-    println!("");
-	Ok(())
-}
-
-pub fn see_folder(dir: &Path) -> Result<(), Box<dyn Error>> {
-	if dir.is_dir() {
-		for entry in fs::read_dir(dir)? {
-				let entry = entry?;
-				let file_name = entry
-						.file_name()
-						.into_string()
-						.or_else(|f| Err(format!("Invalid entry: {:?}", f)))?;
-				print!("{} ", file_name.truecolor(40, 200, 200));
-		}
-	}
-	Ok(())
-}
-
-pub fn find_out(dir: &Path, pattern: &str) -> Result<(), Box<dyn Error>> {
-	if dir.is_dir() {
-		for entry in fs::read_dir(dir)? {
-				let entry = entry?;
-				let file_name = entry
-						.file_name()
-						.into_string()
-						.or_else(|f| Err(format!("Invalid entry: {:?}", f)))?;
-                if file_name.contains(pattern) {
-                    print!("{} ",file_name.truecolor(40, 200, 200));
-                }
-                let way=entry.path();
-                if way.is_dir() && way!=dir {
-                    if let Err(ref e) = find_out(&way,pattern) {
-		            return Err(e.to_string().into()); 
-	                }
-                }
-		}
-	}
-	Ok(())
-}
-
-pub fn search<'a>(query: &'a str, file: &'a str)->Vec<&'a str>{
-    let mut ans=Vec::new();
-    for line in file.lines(){
-        if line.contains(query){
-            ans.push(line.trim());
-        }
-    }
-    ans
-}
-
-fn show_file(content: &String)->Result<(),Box<dyn Error>>{
-    println!("{}",content);
-    println!("");
-    Ok(())
-}
-
 pub fn run(input: Input)->Result<(),Box<dyn Error>>{
     match &input.query[..] {
         "echo" => {
-            if let Err(ref e) = show(&input.cmnd){
+            if let Err(ref e) = cmds::echo::show(&input.cmnd){
 		        return Err(e.to_string().into()); 
 	        } 
         },
         "ls" => {
-            if let Err(ref e) = see_folder(Path::new(".")) {
+            if let Err(ref e) = cmds::ls::see_folder(Path::new(".")) {
                 return Err(e.to_string().into()); 
 	        }       
         },
@@ -105,7 +46,7 @@ pub fn run(input: Input)->Result<(),Box<dyn Error>>{
             let word=&input.cmnd[0];
             for i in 1..input.cmnd.len(){
                 let content=fs::read_to_string(&input.cmnd[i])?;
-                let ans = search(word,&content);
+                let ans = cmds::grep::search(word,&content);
                 let mut cnt=1;
                 println!("Result for query {} Document {}",word.red(),&input.cmnd[i].yellow());
                 for line in ans{
@@ -122,7 +63,7 @@ pub fn run(input: Input)->Result<(),Box<dyn Error>>{
             for i in input.cmnd{
                 println!("Document {} :",i.purple());
                 let content=fs::read_to_string(i.clone())?;
-                if let Err(ref e) = show_file(&content){
+                if let Err(ref e) = cmds::cat::show_file(&content){
 		            return Err(e.to_string().into());
 	            }
                 println!("");
@@ -130,7 +71,7 @@ pub fn run(input: Input)->Result<(),Box<dyn Error>>{
         },
         "find" => {
             let pattern=&input.cmnd[0];
-            if let Err(ref e) = find_out(Path::new("."), &pattern) {
+            if let Err(ref e) = cmds::find::find_out(Path::new("."), &pattern) {
 		        return Err(e.to_string().into()); 
 	        } 
         },
@@ -150,7 +91,7 @@ mod tests{
     #[test]
     fn check_echo(){
         let v=vec![String::from("1")];
-        if let Err(ref e) = show(&v){
+        if let Err(ref e) = cmds::echo::show(&v){
 		        println!("{}", e);
 	        }
     }
