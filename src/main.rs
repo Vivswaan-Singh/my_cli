@@ -1,6 +1,6 @@
 use std::env;
 use std::process;
-use my_cli::Input;
+use my_cli::{Input,run};
 
 fn main() {
     let args:Vec<String>=env::args().collect();
@@ -9,7 +9,7 @@ fn main() {
         process::exit(1);
     });
 
-    if let Err(e)= my_cli::run(input){
+    if let Err(e)= run(input){
         eprintln!("Error in run function: {:?}", e);
         process::exit(1);
     }

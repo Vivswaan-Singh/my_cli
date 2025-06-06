@@ -28,6 +28,7 @@ pub fn show(ips: &Vec<String>) -> Result<(), Box<dyn Error>> {
 	for i in ips{
         print!("{} ",i.red().on_white());
     }
+    println!("");
 	Ok(())
 }
 
@@ -40,6 +41,29 @@ pub fn see_folder(dir: &Path) -> Result<(), Box<dyn Error>> {
 						.into_string()
 						.or_else(|f| Err(format!("Invalid entry: {:?}", f)))?;
 				print!("{} ", file_name.truecolor(40, 200, 200));
+		}
+	}
+	Ok(())
+}
+
+pub fn find_out(dir: &Path, pattern: &str) -> Result<(), Box<dyn Error>> {
+	if dir.is_dir() {
+		for entry in fs::read_dir(dir)? {
+				let entry = entry?;
+				let file_name = entry
+						.file_name()
+						.into_string()
+						.or_else(|f| Err(format!("Invalid entry: {:?}", f)))?;
+                if(file_name.contains(pattern)){
+                    print!("{} ",file_name.truecolor(40, 200, 200));
+                }
+                let way=entry.path();
+                if way.is_dir() && way!=dir {
+                    if let Err(ref e) = find_out(&way,pattern) {
+		            println!("{}", e);
+		            process::exit(1);
+	                }
+                }
 		}
 	}
 	Ok(())
@@ -64,17 +88,21 @@ fn show_file(content: &String)->Result<(),Box<dyn Error>>{
 pub fn run(input: Input)->Result<(),Box<dyn Error>>{
     if input.query=="echo" {
             if let Err(ref e) = show(&input.cmnd){
-		        println!("{}", e);
-		        process::exit(1);
+		        return Err(e.to_string().into()); 
 	        } 
         }
         else if input.query=="ls" {
             if let Err(ref e) = see_folder(Path::new(".")) {
-		        println!("{}", e);
-		        process::exit(1);
+                return Err(e.to_string().into()); 
 	        }       
         }
         else if input.query=="grep" {
+            if input.cmnd.is_empty(){
+                return Err("Not pattern to be searched given".into());
+            }
+            if input.cmnd.len()<2{
+                return Err("Not file(s) to be searched given".into());
+            }
             let word=&input.cmnd[0];
             for i in 1..input.cmnd.len(){
                 let content=fs::read_to_string(&input.cmnd[i])?;
@@ -89,15 +117,28 @@ pub fn run(input: Input)->Result<(),Box<dyn Error>>{
             }
         }
         else if input.query=="cat" {
+            if input.cmnd.is_empty(){
+                return Err("No filename(s) given".into()); 
+            }
             for i in input.cmnd{
                 println!("Document {} :",i.purple());
                 let content=fs::read_to_string(i.clone())?;
                 if let Err(ref e) = show_file(&content){
-		            print!("{}", e);
-		            process::exit(1);
+		            return Err(e.to_string().into());
 	            }
                 println!("");
             }
+        }
+        else if input.query=="find" {
+            let pattern=&input.cmnd[0];
+            if let Err(ref e) = find_out(Path::new("."), &pattern) {
+		        return Err(e.to_string().into()); 
+	        } 
+        }
+        else {
+            eprintln!("Command named {:?} does not exist. Try again.",input.query);
+            return Err("No such command exists".into()); 
+            
         }
     Ok(())
 }
