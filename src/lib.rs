@@ -1,7 +1,6 @@
 use std::fs;
 use std::path::Path;
 use std::error::Error;
-use std::process;
 use colored::*;
 
 #[derive(Debug)]
@@ -54,14 +53,13 @@ pub fn find_out(dir: &Path, pattern: &str) -> Result<(), Box<dyn Error>> {
 						.file_name()
 						.into_string()
 						.or_else(|f| Err(format!("Invalid entry: {:?}", f)))?;
-                if(file_name.contains(pattern)){
+                if file_name.contains(pattern) {
                     print!("{} ",file_name.truecolor(40, 200, 200));
                 }
                 let way=entry.path();
                 if way.is_dir() && way!=dir {
                     if let Err(ref e) = find_out(&way,pattern) {
-		            println!("{}", e);
-		            process::exit(1);
+		            return Err(e.to_string().into()); 
 	                }
                 }
 		}
@@ -86,17 +84,18 @@ fn show_file(content: &String)->Result<(),Box<dyn Error>>{
 }
 
 pub fn run(input: Input)->Result<(),Box<dyn Error>>{
-    if input.query=="echo" {
+    match &input.query[..] {
+        "echo" => {
             if let Err(ref e) = show(&input.cmnd){
 		        return Err(e.to_string().into()); 
 	        } 
-        }
-        else if input.query=="ls" {
+        },
+        "ls" => {
             if let Err(ref e) = see_folder(Path::new(".")) {
                 return Err(e.to_string().into()); 
 	        }       
-        }
-        else if input.query=="grep" {
+        },
+        "grep" => {
             if input.cmnd.is_empty(){
                 return Err("Not pattern to be searched given".into());
             }
@@ -115,8 +114,8 @@ pub fn run(input: Input)->Result<(),Box<dyn Error>>{
                 }
                 println!("");
             }
-        }
-        else if input.query=="cat" {
+        },
+        "cat" => {
             if input.cmnd.is_empty(){
                 return Err("No filename(s) given".into()); 
             }
@@ -128,18 +127,19 @@ pub fn run(input: Input)->Result<(),Box<dyn Error>>{
 	            }
                 println!("");
             }
-        }
-        else if input.query=="find" {
+        },
+        "find" => {
             let pattern=&input.cmnd[0];
             if let Err(ref e) = find_out(Path::new("."), &pattern) {
 		        return Err(e.to_string().into()); 
 	        } 
-        }
-        else {
+        },
+        _ => {
             eprintln!("Command named {:?} does not exist. Try again.",input.query);
             return Err("No such command exists".into()); 
             
         }
+    }
     Ok(())
 }
 
@@ -152,7 +152,6 @@ mod tests{
         let v=vec![String::from("1")];
         if let Err(ref e) = show(&v){
 		        println!("{}", e);
-		        process::exit(1);
 	        }
     }
 }
